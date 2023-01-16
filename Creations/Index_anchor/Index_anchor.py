@@ -290,7 +290,7 @@ assert index_const_time < 60*120
 
 # collect all posting lists locations into one super-set
 super_posting_locs = defaultdict(list)
-for blob in client.list_blobs(bucket_name, prefix='postings_gcp'):
+for blob in client.list_blobs(bucket_name, prefix='postings_gcp_anchor'):
   if not blob.name.endswith("pickle"):
     continue
   with blob.open("rb") as f:
@@ -311,10 +311,10 @@ inverted.posting_locs = super_posting_locs
 # Add the token - df dictionary to the inverted index
 inverted.df = w2df_dict
 # write the global stats out
-inverted.write_index('.', 'index')
+inverted.write_index('.', 'index_anchor')
 # upload to gs
-index_src = "index.pkl"
-index_dst = f'gs://{bucket_name}/postings_gcp/{index_src}'
+index_src = "index_anchor.pkl"
+index_dst = f'gs://{bucket_name}/postings_gcp_anchor/{index_src}'
 get_ipython().system('gsutil cp $index_src $index_dst')
 
 
