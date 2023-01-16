@@ -33,6 +33,8 @@ This file runs the engine and contains the main logic for handling search querie
 # GUI
 The GUI for the search engine is a user-friendly interface that allows users to easily search for information on the internet. It consists of a simple text box where users can enter their search query and a search button to initiate the search. 
 The search results displayed on the GUI are a list of the most relevant documents, with the title of each document prominently displayed. The titles are clearly presented in a consistent format, making it easy for users to quickly scan and identify the information they are looking for.
+![WhatsApp Image 2023-01-16 at 21 17 51](https://user-images.githubusercontent.com/103646836/212752266-37e28a35-9d9b-4f23-88ee-ca39f3e553dd.jpg)
+
 
 # search_bm25() :
 This method is used to retrieve search results using the BM25 ranking algorithm. It takes in the user's query, processes it by removing stopwords and retrieves the results from the inverted index by running on each term in the query, check if the term is in the corpus, get the posting list of the term, then use the BM25 ranking algorithm to calculate the score for each document in the posting list. Then it return the top 100 results.
