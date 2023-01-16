@@ -304,12 +304,24 @@ for blob in client.list_blobs(bucket_name, prefix='postings_gcp_anchor'):
 # In[ ]:
 
 
+from collections import Counter, defaultdict
+import math
+#create DL 
+DL = {}
+nf={}
+doc_id_counts = postings_filtered.flatMap(lambda x: [(doc_id, tf) for doc_id, tf in x[1]]).reduceByKey(lambda x, y: x + y)
+DL = doc_id_counts.collectAsMap()
+nf_id= postings_filtered.flatMap(lambda x: [(doc_id, tf * tf) for doc_id, tf in x[1]]).reduceByKey(lambda x, y: x + y)
+nf = nf_id.collectAsMap()
+
 # Create inverted index instance
 inverted = InvertedIndex()
 # Adding the posting locations dictionary to the inverted index
 inverted.posting_locs = super_posting_locs
 # Add the token - df dictionary to the inverted index
 inverted.df = w2df_dict
+inverted.DL = DL
+inverted.nf = nf
 # write the global stats out
 inverted.write_index('.', 'index_anchor')
 # upload to gs
