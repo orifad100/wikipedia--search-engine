@@ -159,33 +159,47 @@ def search_bm25():
     query = request.args.get('query', '')
     if len(query) == 0:
         return jsonify(res)
-    # BEGIN SOLUTION
-
+    
+    # create an empty Counter object to store document scores
     candidates = Counter()
+    
+    # tokenize and remove stopwords from the query
     query = tokenization_stopwords(query)
-    for term in query:  # run on each term in the query
-        if term in app.index_text.df:  # check that the word is in the corpus
-            posting_list = read_posting_list(app.index_text, term,
-                                             "postings_gcp_text/")  # get the pls of the word -> {(doc_id,f)...}
-            df = app.index_text.df[term]  # number of documnets that  contains the 'term'
+    
+    # loop through each term in the query
+    for term in query:
+        # check if the term exists in the corpus
+        if term in app.index_text.df:
+            # read the posting list of the term
+            posting_list = read_posting_list(app.index_text, term, "postings_gcp_text/")
+            
+            # calculate idf of the term
+            df = app.index_text.df[term]
             idf = math.log(1 + (app.N - df + 0.5) / (df + 0.5))
-            for doc_id, freq in posting_list:  # run on the pls of the term
-                if doc_id in app.index_text.DL.keys():  # if the doc_id exist in the corpus
+            
+            # loop through each (doc_id, freq) pair in the posting list
+            for doc_id, freq in posting_list:
+                # check if the doc_id exists in the corpus
+                if doc_id in app.index_text.DL.keys():
                     len_doc = app.index_text.DL[doc_id]
+                    
+                    # calculate bm25 score of the term for the document
                     numerator = idf * freq * (app.k1 + 1)
                     denominator = (freq + app.k1 * (1 - app.b + app.b * len_doc / app.AVGDL))
                     bm25_score = numerator / denominator
                     bm25_score = bm25_score*((app.k2+1)*freq/(app.k2+freq))
+                    
+                    # add the bm25 score to the document's score in the candidates Counter
                     candidates[doc_id] += bm25_score
-
+    
+    # sort the documents by their scores and keep the top 100
     for k, v in candidates.most_common(100):
         res.append((k, app.index_title.id_title_dict[k]))
-    # res = [(k, app.index_title.id_title_dict[k]) for k, v in
-    #        sorted(candidates.items(), key=lambda item: item[1], reverse=True)][:100]
-    # END SOLUTION
+    
     if app.flag == True:
         return res
     return jsonify(res)
+
 
 
 # This function returns up to a 100 search results for the query using TFIDF AND COSINE
