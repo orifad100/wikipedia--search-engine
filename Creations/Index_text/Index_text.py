@@ -135,8 +135,7 @@ sys.path.insert(0,SparkFiles.getRootDirectory())
 from inverted_index_gcp import InvertedIndex
 
 
-# **YOUR TASK (10 POINTS)**: Use your implementation of `word_count`, `reduce_word_counts`, `calculate_df`, and `partition_postings_and_write` functions from Colab to build an inverted index for all of English Wikipedia in under 2 hours.
-# 
+
 # A few notes: 
 # 1. The number of corpus stopwords below is a bit bigger than the colab version since we are working on the whole corpus and not just on one file.
 # 2. You need to slightly modify your implementation of  `partition_postings_and_write` because the signature of `InvertedIndex.write_a_posting_list` has changed and now includes an additional argument called `bucket_name` for the target bucket. See the module for more details.
@@ -147,21 +146,39 @@ from inverted_index_gcp import InvertedIndex
 
 
 
-# PLACE YOUR CODE HERE
+# Define a set of stopwords for the English language.
 english_stopwords = frozenset(stopwords.words('english'))
+
+# Define a list of stopwords specific to the corpus being analyzed.
 corpus_stopwords = ["category", "references", "also", "external", "links", 
                     "may", "first", "see", "history", "people", "one", "two", 
                     "part", "thumb", "including", "second", "following", 
                     "many", "however", "would", "became"]
 
+# Combine the two sets of stopwords into a single set.
 all_stopwords = english_stopwords.union(corpus_stopwords)
+
+# Define a regular expression pattern to extract words from text.
 RE_WORD = re.compile(r"""[\#\@\w](['\-]?\w){2,24}""", re.UNICODE)
 
+# Define the number of buckets to use for hashing.
 NUM_BUCKETS = 124
+
 def token2bucket_id(token):
+  ''' Given a token, hash it and return the ID of the bucket it belongs to.
+  Parameters:
+  -----------
+    token: str
+      A word token
+  Returns:
+  --------
+    int
+      An integer representing the ID of the bucket that the token belongs to
+  '''
   return int(_hash(token),16) % NUM_BUCKETS
 
-# PLACE YOUR CODE HERE
+# Define a function to count the frequency of words in a text and return 
+# a list of tuples in the form (token, (doc_id, tf)).
 def word_count(text, id):
   ''' Count the frequency of each word in `text` (tf) that is not included in 
   `all_stopwords` and return entries that will go into our posting lists. 
@@ -177,19 +194,28 @@ def word_count(text, id):
       A list of (token, (doc_id, tf)) pairs 
       for example: [("Anarchism", (12, 5)), ...]
   '''
+  # Use the RE_WORD pattern to extract all word tokens from the text.
   tokens = [token.group() for token in RE_WORD.finditer(text.lower())]
-  # YOUR CODE HERE
+
+  # Filter out any tokens that are in the set of stopwords.
   tokens = [token for token  in tokens if token not in all_stopwords]
-  dict1={}
-  list1=[]
-  for tok in tokens :
+
+  # Count the frequency of each remaining token and store the results in a dictionary.
+  dict1 = {}
+  for tok in tokens:
     if tok in dict1:
-      dict1[tok]=dict1[tok]+1
+      dict1[tok] = dict1[tok] + 1
     else:
-      dict1[tok]=1
+      dict1[tok] = 1
+
+  # Convert the dictionary of word frequencies into a list of tuples.
+  list1 = []
   for k,v in dict1.items():
     list1.append((k,(id,v)))
+
+  # Return the list of tuples.
   return list1
+
 
 def reduce_word_counts(unsorted_pl):
   ''' Returns a sorted posting list by wiki_id.
