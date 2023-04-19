@@ -188,55 +188,70 @@ def search_bm25():
     return jsonify(res)
 
 
+# This function returns up to a 100 search results for the query using TFIDF AND COSINE
+# SIMILARITY OF THE BODY OF ARTICLES ONLY. It uses the staff-provided tokenizer from 
+# Assignment 3 (GCP part) to do the tokenization and remove stopwords. 
+
 @app.route("/search_body")
 def search_body():
-    ''' Returns up to a 100 search results for the query using TFIDF AND COSINE
-        SIMILARITY OF THE BODY OF ARTICLES ONLY. DO NOT use stemming. DO USE the
-        staff-provided tokenizer from Assignment 3 (GCP part) to do the
-        tokenization and remove stopwords.
-
-        To issue a query navigate to a URL like:
-         http://YOUR_SERVER_DOMAIN/search_body?query=hello+world
-        where YOUR_SERVER_DOMAIN is something like XXXX-XX-XX-XX-XX.ngrok.io
-        if you're using ngrok on Colab or your external IP on GCP.
-    Returns:
-    --------
-        list of up to 100 search results, ordered from best to worst where each
-        element is a tuple (wiki_id, title).
-    '''
-    res = []
+    # Get the query from the URL parameters
     query = request.args.get('query', '')
+    
+    # If the query is empty, return an empty list of results
     if len(query) == 0:
-        return jsonify(res)
-    # BEGIN SOLUTION
+        return jsonify([])
+    
+    # Tokenize the query and remove stopwords using the tokenization_stopwords function
     query = tokenization_stopwords(query)
+    
+    # Create a counter of the query terms
     counter_query = Counter(query)
+    
+    # Create a defaultdict to store the cosine similarity of each document to the query
     similarities = defaultdict(int)
+    
+    # For each term in the query, calculate its weight in each document where it appears
     for term in query:
         if term in app.index_text.df:
+            # Calculate the inverse document frequency (IDF) for the term
             idf = math.log2(len(app.index_text.DL) / app.index_text.df[term])
+            
+            # Read the posting list for the term
             posting_list = read_posting_list(app.index_text, term, "postings_gcp_text/")
+            
+            # For each document where the term appears, calculate the term frequency (TF)
+            # and weight it by the IDF
             for doc_id, freq in posting_list:
                 tf = freq / app.index_text.DL[doc_id]
                 weight = tf * idf
+                
+                # Add the weighted term to the document's similarity score
                 similarities[doc_id] += weight * counter_query[term]
-
-    # normalization for the query = 1/|q|
+    
+    # Normalize the similarity score by the query and document lengths
     normalization_query = 0
     sum_q = 0
+    
+    # Calculate the length of the query vector
     for term, freq in counter_query.items():
         sum_q += freq * freq
+    
     normalization_query = 1 / math.sqrt(sum_q)
-
+    
+    # For each document, normalize the similarity score by the document length and the query length
     for doc_id in similarities.keys():
         nf = 1 / math.sqrt(app.index_text.nf[doc_id])
         similarities[doc_id] *= normalization_query * nf
+    
+    # Sort the documents by similarity score and return the top 100
     res = [(k, app.index_title.id_title_dict[k]) for k, v in
            sorted(similarities.items(), key=lambda item: item[1], reverse=True)][:100]
-    # END SOLUTION
+    
+    # Return the results as JSON
     if app.flag == True:
         return res
     return jsonify(res)
+
 
 
 @app.route("/search_title")
