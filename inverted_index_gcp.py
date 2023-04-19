@@ -232,31 +232,42 @@ class InvertedIndex:
 
 
     @staticmethod
-    def write_a_posting_list(b_w_pl, bucket_name):
-        posting_locs = defaultdict(list)
-        bucket_id, list_w_pl = b_w_pl
+def write_a_posting_list(b_w_pl, bucket_name):
+    # A static method to write a posting list to a binary file and upload it to Google Cloud Storage.
+    posting_locs = defaultdict(list)
+    bucket_id, list_w_pl = b_w_pl
+    
+    # create a MultiFileWriter object to write the posting list to binary files
+    with closing(MultiFileWriter(".", bucket_id, bucket_name)) as writer:
+        for w, pl in list_w_pl: 
+            # convert the doc_id and tf into bytes
+            b = b''.join([(doc_id << 16 | (tf & TF_MASK)).to_bytes(TUPLE_SIZE, 'big')
+                          for doc_id, tf in pl])
+            # write to file(s)
+            locs = writer.write(b)
+            # save file locations to index
+            posting_locs[w].extend(locs)
         
-        with closing(MultiFileWriter(".", bucket_id, bucket_name)) as writer:
-            for w, pl in list_w_pl: 
-                # convert to bytes
-                b = b''.join([(doc_id << 16 | (tf & TF_MASK)).to_bytes(TUPLE_SIZE, 'big')
-                              for doc_id, tf in pl])
-                # write to file(s)
-                locs = writer.write(b)
-                # save file locations to index
-                posting_locs[w].extend(locs)
-            writer.upload_to_gcp() 
-            InvertedIndex._upload_posting_locs(bucket_id, posting_locs, bucket_name)
-        return bucket_id
+        # upload the binary file(s) to Google Cloud Storage
+        writer.upload_to_gcp() 
+        # save the file locations to a pickle file and upload it to Google Cloud Storage
+        InvertedIndex._upload_posting_locs(bucket_id, posting_locs, bucket_name)
+    
+    # return the bucket_id of the posting list
+    return bucket_id
 
+
+@staticmethod
+def _upload_posting_locs(bucket_id, posting_locs, bucket_name):
+    # A static method to save the file locations of a posting list to a pickle file and upload it to Google Cloud Storage.
+    # save the file locations to a pickle file
+    with open(f"{bucket_id}_posting_locs.pickle", "wb") as f:
+        pickle.dump(posting_locs, f)
     
-    @staticmethod
-    def _upload_posting_locs(bucket_id, posting_locs, bucket_name):
-        with open(f"{bucket_id}_posting_locs.pickle", "wb") as f:
-            pickle.dump(posting_locs, f)
-        client = storage.Client()
-        bucket = client.bucket(bucket_name)
-        blob_posting_locs = bucket.blob(f"postings_gcp_title/{bucket_id}_posting_locs.pickle")
-        blob_posting_locs.upload_from_filename(f"{bucket_id}_posting_locs.pickle")
-    
+    # upload the pickle file to Google Cloud Storage
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob_posting_locs = bucket.blob(f"postings_gcp_title/{bucket_id}_posting_locs.pickle")
+    blob_posting_locs.upload_from_filename(f"{bucket_id}_posting_locs.pickle")
+
 
