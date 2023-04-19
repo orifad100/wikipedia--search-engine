@@ -265,7 +265,6 @@ def search_title():
         document with a title that matches only one distinct query word,
         regardless of the number of times the term appeared in the title (or
         query).
-
         Test this by navigating to the a URL like:
          http://YOUR_SERVER_DOMAIN/search_title?query=hello+world
         where YOUR_SERVER_DOMAIN is something like XXXX-XX-XX-XX-XX.ngrok.io
@@ -277,29 +276,47 @@ def search_title():
     '''
     res = []
     query = request.args.get('query', '')
+
+    # Tokenize and remove stopwords from query
     query = tokenization_stopwords(query)
+
+    # If the query is empty, return an empty result
     if len(query) == 0:
         return jsonify(res)
+
     # BEGIN SOLUTION
+    # Create a dictionary to keep track of candidate documents
     candidates = {}
+
+    # Iterate over each unique query word
     for word in np.unique(query):
+        # If the word appears in the title index
         if word in app.index_title.df:
+            # Read the posting list for the word from disk
             with closing(inverted_index_gcp.MultiFileReader()) as reader:
                 locs = app.index_title.posting_locs[word]
                 n_byte_array = app.index_title.df[word] * TUPLE_SIZE
                 b = reader.read(locs, n_byte_array, "postings_gcp_title/")
+                # Iterate over each document ID in the posting list
                 for i in range(app.index_title.df[word]):
                     doc_id = int.from_bytes(b[i * TUPLE_SIZE:i * TUPLE_SIZE + 4], 'big')
+                    # If the document ID is not already in the candidate list, add it
                     if doc_id not in candidates:
                         candidates[doc_id] = 1
+                    # Otherwise, increment the candidate document's score
                     else:
                         candidates[doc_id] += 1
 
+    # Sort the candidate documents by their score (number of distinct query words in the title)
     res = [(k, app.index_title.id_title_dict[k]) for k, v in
            sorted(candidates.items(), key=lambda item: item[1], reverse=True)]
+
+    # END SOLUTION
+    # Return the result as a JSON object
     if app.flag == True:
         return res
     return jsonify(res)
+
 
 
 @app.route("/search_anchor")
