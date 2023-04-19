@@ -85,31 +85,52 @@ class MultiFileWriter:
 
         
 
+
+
 class MultiFileReader:
     """ Sequential binary reader of multiple files of up to BLOCK_SIZE each. """
+
     def __init__(self):
+        """ Initializes a MultiFileReader object. """
         self._open_files = {}
 
-    def read(self, locs, n_bytes,base_dir=""):
+    def read(self, locs, n_bytes, base_dir=""):
+        """ Reads bytes from the files at specified locations.
+
+        Args:
+            locs (list): A list of tuples, each containing the name of the file and the position of the bytes in the file.
+            n_bytes (int): The number of bytes to read.
+            base_dir (str, optional): The base directory where the files are located. Defaults to "".
+
+        Returns:
+            The bytes read from the files.
+        """
         b = []
         for f_name, offset in locs:
+            # If file is not open yet, open it
             if f_name not in self._open_files:
                 self._open_files[f_name] = open(base_dir + f_name, 'rb')
 
+            # Seek to the position in the file to read from
             f = self._open_files[f_name]
             f.seek(offset)
+            
+            # Read up to BLOCK_SIZE bytes, or n_bytes if less than BLOCK_SIZE remaining
             n_read = min(n_bytes, BLOCK_SIZE - offset)
             b.append(f.read(n_read))
             n_bytes -= n_read
         return b''.join(b)
-  
+
     def close(self):
+        """ Closes all open files. """
         for f in self._open_files.values():
             f.close()
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """ Called when exiting the 'with' block. Closes all open files. """
         self.close()
-        return False 
+        return False
+
 
 
 from collections import defaultdict
