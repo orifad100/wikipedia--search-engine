@@ -47,26 +47,40 @@ def avg_doc_length(docs_text, docs_title, docs_anchor):
     return total_length/6348910
 
 class MyFlaskApp(Flask):
+    # Initialize some constants and load indexes and dictionaries.
     def run(self, host=None, port=None, debug=None, **options):
+        # Set constants for BM25 formula
         self.N = 6348910
         self.k1 = 1.0
         self.b = 0.9
         self.k2 = 10.0
 
+        # Load inverted index for title field
         self.title_index_path = "postings_gcp_title"
         self.index_title = inverted_index_gcp.InvertedIndex.read_index(self.title_index_path, 'index_title')
 
+        # Load inverted index for anchor field
         self.anchor_index_path = "postings_gcp_anchor"
         self.index_anchor = inverted_index_gcp.InvertedIndex.read_index(self.anchor_index_path, 'index_anchor')
 
+        # Load inverted index for text field
         self.text_index_path = "postings_gcp_text"
         self.index_text = inverted_index_gcp.InvertedIndex.read_index(self.text_index_path, 'index_text')
+
+        # Set some variables to be used later
         self.num = 0
         self.flag = False
+
+        # Load PageRank dictionary
         self.pr_dict = get_csv()
 
+        # Load popularity dictionary
         self.pv_dict = get_pv()
+
+        # Calculate the average document length for BM25 formula
         self.AVGDL = avg_doc_length(app.index_text.DL,app.index_title.DL,app.index_anchor.DL)
+
+        # Run the Flask app
         super(MyFlaskApp, self).run(host=host, port=port, debug=debug, **options)
 
 
