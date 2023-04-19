@@ -298,15 +298,25 @@ assert index_const_time < 60*120
 # In[ ]:
 
 
-# collect all posting lists locations into one super-set
+# create an empty dictionary to hold all the posting list locations
 super_posting_locs = defaultdict(list)
+
+# iterate through each blob object in the GCP bucket with a prefix of 'postings_gcp_text'
 for blob in client.list_blobs(bucket_name, prefix='postings_gcp_text'):
+  
+  # skip any blob that doesn't have a pickle extension
   if not blob.name.endswith("pickle"):
     continue
+    
+  # open the blob object as a binary file and load the posting locations from it
   with blob.open("rb") as f:
     posting_locs = pickle.load(f)
+    
+    # iterate through the key-value pairs in the posting location dictionary and append 
+    # the value (posting location) to the list corresponding to the key (word) in the super dictionary
     for k, v in posting_locs.items():
       super_posting_locs[k].extend(v)
+
 
 
 # Putting it all together
