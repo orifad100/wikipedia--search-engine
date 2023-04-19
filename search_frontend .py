@@ -77,27 +77,24 @@ app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 
 @app.route("/search")
 def search():
-    ''' Returns up to a 100 of your best search results for the query. This is
-        the place to put forward your best search engine, and you are free to
-        implement the retrieval whoever you'd like within the bound of the
-        project requirements (efficiency, quality, etc.). That means it is up to
-        you to decide on whether to use stemming, remove stopwords, use
-        PageRank, query expansion, etc.
+    # This function returns up to 100 search results for a given query.
+    # It uses BM25 algorithm for retrieval and also factors in PageRank and popularity of pages.
+    # It also considers whether the query is a question or not.
+    # The results are returned as a list of tuples (wiki_id, title).
 
-        To issue a query navigate to a URL like:
-         http://YOUR_SERVER_DOMAIN/search?query=hello+world
-        where YOUR_SERVER_DOMAIN is something like XXXX-XX-XX-XX-XX.ngrok.io
-        if you're using ngrok on Colab or your external IP on GCP.
-    Returns:
-    --------
-        list of up to 100 search results, ordered from best to worst where each
-        element is a tuple (wiki_id, title).
-    '''
+    # Set flag to True to indicate that the search function is being executed.
     app.flag = True
     res = []
+
+    # Get the query parameter from the request.
     query = request.args.get('query', '')
+
+    # If the query is empty, return an empty list.
     if len(query) == 0:
         return jsonify(res)
+
+    # Set initial values for some variables.
+    # x and y are used to weight the contributions of the different retrieval methods.
     x = 149.15920831630416
     flag_question = False
     if query[-1] == '?' or query[0] in ["What", "Which", "Who", "Where", "Why", "When", "How", "Whose"]:
@@ -105,33 +102,37 @@ def search():
         flag_question = True
     y = 5.193904691848007
 
+    # If the query is short (less than 4 characters), give more weight to the title and anchor texts.
     if len(query) < 4 and query[-1] != '?':
         y = 59.41622193605568
 
-    # BEGIN SOLUTION
+    # Tokenize the query and remove stopwords.
     query = tokenization_stopwords(query)
     counter_query = Counter(query)
 
+    # Perform search using BM25 algorithm on the text, title and anchor texts.
     text_data = search_bm25()
     title_data = search_title()
-    title_data = title_data
     anchor_data = search_anchor()
-    anchor_data = anchor_data
+
+    # Create a dictionary to store the scores for each document.
     ranked = Counter()
+
+    # Add scores for the text data based on BM25 algorithm.
     i = 0
-    k = 0
-    j = 0
     for doc_id, title in text_data:
         ranked[doc_id] += x / (i + 1)
         i += 1
 
-
+    # Add scores for the title data.
     for doc_id, title in title_data:
         ranked[doc_id] += y
 
+    # Add scores for the anchor data.
     for doc_id, title in anchor_data:
-        ranked[doc_id] +=  4.548782213371328
+        ranked[doc_id] += 4.548782213371328
 
+    # Factor in PageRank and popularity of pages.
     for doc_id, score in ranked.items():
         if app.pr_dict[doc_id] > 1:
             pr = int(math.log10(app.pr_dict[doc_id]))
@@ -143,14 +144,18 @@ def search():
             pv = 2.0
         else:
             pv = app.pv_dict[doc_id]
-        ranked[doc_id] = ranked[doc_id]*1.5 *pr *0.75*pv
-    for k,v in ranked.most_common(100):
-        res.append((k, app.index_title.id_title_dict[k]))
- 
+        ranked[doc_id] = ranked[doc_id] * 1.5 * pr * 0.75 * pv
 
-    # END SOLUTION
+    # Get the top 100 search results and add them to the results list.
+    for k, v in ranked.most_common(100):
+        res.append((k, app.index_title.id_title_dict[k]))
+
+    # Set flag to False to indicate that the search function has finished executing.
     app.flag = False
+
+    # Return the results as a JSON object.
     return jsonify(res)
+
 
 
 @app.route("/search_bm25")
