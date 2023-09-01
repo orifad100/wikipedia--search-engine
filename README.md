@@ -33,7 +33,7 @@ This file runs the engine and contains the main logic for handling search querie
 # GUI
 The GUI for the search engine is a user-friendly interface that allows users to easily search for information on the internet. It consists of a simple text box where users can enter their search query and a search button to initiate the search. 
 The search results displayed on the GUI are a list of the most relevant documents, with the title of each document prominently displayed. The titles are clearly presented in a consistent format, making it easy for users to quickly scan and identify the information they are looking for.
-![WhatsApp Image 2023-01-16 at 21 17 51](https://user-images.githubusercontent.com/103646836/212752266-37e28a35-9d9b-4f23-88ee-ca39f3e553dd.jpg)
+![image](https://github.com/orifad100/wikipedia--search-engine/assets/103646836/b7d2fdf2-5c18-4eac-ab2a-c194108969e5)
 
 
 # search_bm25() :
